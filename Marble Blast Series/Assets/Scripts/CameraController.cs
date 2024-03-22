@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class CameraController : MonoBehaviour
@@ -10,20 +8,20 @@ public class CameraController : MonoBehaviour
     public float sensitivity = 800.0f;
     private float rotationX = 20.0f;
     private float rotationY = 90.0f;
-    private float minYAngle = -90.0f;
-    private float maxYAngle = 90.0f;
-    private float distanceToPlayer = 5.0f;
-    private float autoRotationSpeed = 36.0f;
+    private const float MinYAngle = -90.0f;
+    private const float MaxYAngle = 90.0f;
+    private const float DistanceToPlayer = 5.0f;
+    private const float AutoRotationSpeed = 36.0f;
     private float mouseX;
     private float mouseY;
 
     private void SetupCamera()
     {
         offset = transform.position - player.transform.position;
-        offset = offset.normalized * distanceToPlayer;
+        offset = offset.normalized * DistanceToPlayer;
     }
 
-    void Start()
+    private void Start()
     {
         SetupCamera();
     }
@@ -36,30 +34,30 @@ public class CameraController : MonoBehaviour
     private void RotateCamera()
     {
         rotationX -= mouseY;
-        rotationX = Mathf.Clamp(rotationX, minYAngle, maxYAngle);
+        rotationX = Mathf.Clamp(rotationX, MinYAngle, MaxYAngle);
 
         rotationY += mouseX;
 
-        transform.rotation = Quaternion.Euler(rotationX, rotationY, 0);
+        Transform transform1;
+        (transform1 = transform).rotation = Quaternion.Euler(rotationX, rotationY, 0);
         
-        transform.position = player.transform.position - transform.forward * offset.magnitude;
+        transform1.position = player.transform.position - transform1.forward * offset.magnitude;
     }
 
     private void RotateForever()
     {
-        rotationY += autoRotationSpeed * Time.deltaTime;
-        transform.rotation = Quaternion.Euler(rotationX, rotationY, 0);
-        transform.position = player.transform.position - transform.forward * offset.magnitude;
+        rotationY += AutoRotationSpeed * Time.deltaTime;
+        Transform transform1;
+        (transform1 = transform).rotation = Quaternion.Euler(rotationX, rotationY, 0);
+        transform1.position = player.transform.position - transform1.forward * offset.magnitude;
     }
 
     private void Update()
     {
-        if (playerRb.useGravity)
-        {
-            FollowPlayer();
-            mouseX = Input.GetAxis("Mouse X") * sensitivity * Time.deltaTime;
-            mouseY = Input.GetAxis("Mouse Y") * sensitivity * Time.deltaTime;
-        }
+        if (!playerRb.useGravity) return;
+        FollowPlayer();
+        mouseX = Input.GetAxis("Mouse X") * sensitivity * Time.deltaTime;
+        mouseY = Input.GetAxis("Mouse Y") * sensitivity * Time.deltaTime;
     }
 
     private void FixedUpdate()

@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -8,15 +6,24 @@ public class PauseMenu : MonoBehaviour
     public GameObject pauseCanvas;
     public GameObject settingsCanvas;
 
-    public void Pause()
+    private AudioManager audioManager;
+    
+    private void Awake()
     {
+        audioManager = GameObject.FindGameObjectWithTag("Audio").GetComponent<AudioManager>();
+    }
+
+    public void Pause(bool clicked = true)
+    {
+        if (clicked) audioManager.PlaySfx(audioManager.buttonClick);
         pauseCanvas.SetActive(true);
         settingsCanvas.SetActive(false);
         Time.timeScale = 0;
     }
     
-    public void Continue()
+    public void Continue(bool clicked = true)
     {
+        if (clicked) audioManager.PlaySfx(audioManager.buttonClick);
         pauseCanvas.SetActive(false);
         settingsCanvas.SetActive(false);
         Time.timeScale = 1;
@@ -24,33 +31,33 @@ public class PauseMenu : MonoBehaviour
     
     public void Settings()
     {
+        audioManager.PlaySfx(audioManager.buttonClick);
         settingsCanvas.SetActive(true);
         pauseCanvas.SetActive(false);
     }
     
     public void Quit()
     {
+        audioManager.PlaySfx(audioManager.buttonClick);
         SceneManager.LoadScene(0);
     }
 
-    void Start()
+    private void Start()
     {
         pauseCanvas.SetActive(false);
         settingsCanvas.SetActive(false);
     }
     
-    void Update()
+    private void Update()
     {
-        if (Input.GetButtonDown("Cancel"))
+        if (!Input.GetButtonDown("Cancel")) return;
+        if (pauseCanvas.activeSelf)
         {
-            if (pauseCanvas.activeSelf)
-            {
-                Continue();
-            }
-            else
-            {
-                Pause();
-            }
+            Continue(false);
+        }
+        else
+        {
+            Pause(false);
         }
     }
 }

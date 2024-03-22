@@ -1,16 +1,14 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine.SceneManagement;
 using UnityEngine;
 
 public class GameManagerSystem : MonoBehaviour
 {
-    private void RestartScene()
+    private static void RestartScene()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
     
-    void Update()
+    private void Update()
     {
         if (Input.GetButtonDown("Restart Level"))
         {

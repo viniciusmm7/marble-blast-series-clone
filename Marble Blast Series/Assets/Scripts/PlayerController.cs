@@ -1,52 +1,60 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using TMPro;
+using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
     private Rigidbody rb;
     private Camera mainCamera;
     private Collider endPlatformCollider;
+    private AudioManager audioManager;
 
-    private float speed = 20.0f;
-    private float jumpForce = 7.0f;
+    private const float Speed = 20.0f;
+    private const float JumpForce = 7.0f;
+    // private const float MaxAngularVelocity = 10.0f;
+    
     private bool isGrounded;
     private bool isGameActive = true;
+	private bool isWinConditionMet;
     private int count;
-    public int countWinCondition = 0;
     private float movementX;
     private float movementY;
     
-    public TextMeshProUGUI countText;
-    public TextMeshProUGUI winConditionText;
-    public GameObject winConditionTextObject;
+    public int countWinCondition;
+    public float timeRemaining = 30.0f;
+    
+    public Text countText;
+    public Text timerText;
+    public Text winConditionText;
     public GameObject winMenu;
+    public GameObject gameOverCanvas;
 
-
-    void Start()
+    private void Awake()
     {
-        rb = GetComponent<Rigidbody>();
-        count = 0;
-        ShowMessage(countText, "Count: " + count.ToString());
-        winConditionTextObject.SetActive(false);
-        winMenu.SetActive(false);
-        mainCamera = Camera.main;
+        audioManager = GameObject.FindGameObjectWithTag("Audio").GetComponent<AudioManager>();
     }
 
-    private void ShowMessage(TextMeshProUGUI textObject, string message, float duration = -1.0f)
+    private void Start()
+    {
+        rb = GetComponent<Rigidbody>();
+        ShowMessage(countText, count + "/" + countWinCondition);
+        winConditionText.gameObject.SetActive(false);
+        timerText.gameObject.SetActive(false);
+        winMenu.SetActive(false);
+        gameOverCanvas.SetActive(false);
+        mainCamera = Camera.main;
+        Time.timeScale = 1;
+    }
+
+    private void ShowMessage(Text textObject, string message, float duration = -1.0f, bool isTutorial = false)
     {
         textObject.gameObject.SetActive(true);
         textObject.text = message;
-
-        if (duration > 0.0f)
-        {
-            StartCoroutine(HideMessageAfterDelay(textObject, duration));
-        }
+		if (isTutorial) audioManager.PlaySfx(audioManager.helpTrigger);
+        if (duration > 0.0f) StartCoroutine(HideMessageAfterDelay(textObject, duration));
     }
 
-    private IEnumerator HideMessageAfterDelay(TextMeshProUGUI textObject, float duration)
+    private static IEnumerator HideMessageAfterDelay(Component textObject, float duration)
     {
         yield return new WaitForSeconds(duration);
         textObject.gameObject.SetActive(false);
@@ -54,23 +62,37 @@ public class PlayerController : MonoBehaviour
 
     private void Jump()
     {
-        if (isGrounded && isGameActive)
-        {
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-        }
+        if (!isGrounded || !isGameActive) return;
+        rb.AddForce(Vector3.up * JumpForce, ForceMode.Impulse);
+        audioManager.PlaySfx(audioManager.playerJump);
     }
 
+    private void GameOver()
+    {
+        gameOverCanvas.SetActive(true);
+        ShowMessage(timerText, "Time's up!");
+        audioManager.StopRollingSfx();
+        Time.timeScale = 0;
+    }
+
+    private void UpdateTime()
+    {
+        if (!isGameActive) return;
+        timeRemaining -= Time.deltaTime;
+        var timeRemainingInt = (int) timeRemaining;
+        ShowMessage(timerText, "Time Remaining: " + timeRemainingInt);
+    }
+    
     private void Update()
     {
-        if (Input.GetButtonDown("Jump"))
-        {
-            Jump();
-        }
+        UpdateTime();
+        if (timeRemaining <= 0) GameOver();
+        if (Input.GetButtonDown("Jump")) Jump();
     }
 
     private Vector3 GetCameraForward()
     {
-        Vector3 cameraForward = mainCamera.transform.forward;
+        var cameraForward = mainCamera.transform.forward;
         cameraForward.y = 0;
         cameraForward.Normalize();
         return cameraForward;
@@ -78,7 +100,7 @@ public class PlayerController : MonoBehaviour
 
     private Vector3 GetCameraRight()
     {
-        Vector3 cameraRight = mainCamera.transform.right;
+        var cameraRight = mainCamera.transform.right;
         cameraRight.y = 0;
         cameraRight.Normalize();
         return cameraRight;
@@ -86,70 +108,86 @@ public class PlayerController : MonoBehaviour
 
     private Vector3 GetMovementDirection()
     {
-        if (!isGameActive)
-        {
-            return Vector3.zero;
-        }
+        if (!isGameActive) return Vector3.zero;
 
-        float moveHorizontal = Input.GetAxis("Horizontal");
-        float moveVertical = Input.GetAxis("Vertical");
+        var moveHorizontal = Input.GetAxis("Horizontal");
+        var moveVertical = Input.GetAxis("Vertical");
 
-        Vector3 cameraForward = GetCameraForward();
-        Vector3 cameraRight = GetCameraRight();
+        var cameraForward = GetCameraForward();
+        var cameraRight = GetCameraRight();
 
-        Vector3 forwardRelative = cameraForward * moveVertical;
-        Vector3 rightRelative = cameraRight * moveHorizontal;
+        var forwardRelative = cameraForward * moveVertical;
+        var rightRelative = cameraRight * moveHorizontal;
 
-        Vector3 movementDirection = forwardRelative + rightRelative;
+        var movementDirection = forwardRelative + rightRelative;
 
         return movementDirection;
     }
 
+    // private void RotateToMove()
+    // {
+    //     var movementDirection = GetMovementDirection();
+    //     var angularSpeed = Mathf.Clamp(movementDirection.magnitude, 0.0f, 1.0f) * MaxAngularVelocity;
+    //     var forward = GetCameraForward() * movementDirection.z;
+    //     var right = GetCameraRight() * movementDirection.x;
+    //     rb.angularVelocity = angularSpeed * (forward + right);
+    // }
+
     private void RelativeMove()
     {
-        Vector3 movementDirection = GetMovementDirection();
-
+        var movementDirection = GetMovementDirection();
+    
         movementX = movementDirection.x;
         movementY = movementDirection.z;
-
+    
         if (movementDirection.magnitude > 1)
         {
             movementDirection.Normalize();
         }
     }
-
+    
     private void NormalizeSpeed()
     {
-        if (rb.velocity.magnitude > speed)
+        if (rb.velocity.magnitude > Speed)
         {
-            rb.velocity = rb.velocity.normalized * speed;
+            rb.velocity = rb.velocity.normalized * Speed;
         }
     }
-
+    
     private void MovePlayer(string type)
     {
-        Vector3 movement = new Vector3(movementX, 0.0f, movementY);
-        if (type == "grounded") rb.AddForce(movement * speed);
-        if (type == "airborne") rb.AddForce(movement * speed / 5);
+        var movement = new Vector3(movementX, 0.0f, movementY);
+        switch (type)
+        {
+            case "grounded":
+                rb.AddForce(movement * Speed);
+                break;
+            case "airborne":
+                rb.AddForce(movement * Speed / 5);
+                break;
+        }
     }
     private void SmoothLockPlayer()
     {
         rb.useGravity = false;
         
-        Vector3 platformCenter = endPlatformCollider.bounds.center;
-        Vector3 targetPosition = new Vector3(platformCenter.x, platformCenter.y + 2.0f, platformCenter.z);
+        var platformCenter = endPlatformCollider.bounds.center;
+        var targetPosition = new Vector3(platformCenter.x, platformCenter.y + 2.0f, platformCenter.z);
+        
+        var playerPosition = transform.position;
 
-        Vector3 gravityDirection = (targetPosition - transform.position).normalized;
+        var gravityDirection = (targetPosition - playerPosition).normalized;
 
-        Vector3 gravityForce = gravityDirection * 100.0f * rb.mass;
+        var gravityForce = gravityDirection * rb.mass;
+        gravityForce *= 100.0f;
 
         rb.AddForce(gravityForce);
 
-        Vector3 newPosition = Vector3.Lerp(transform.position, targetPosition, Time.fixedDeltaTime);
+        var newPosition = Vector3.Lerp(playerPosition, targetPosition, Time.fixedDeltaTime);
 
         rb.MovePosition(newPosition);
         
-        if (Vector3.Distance(transform.position, targetPosition) < 0.3f)
+        if (Vector3.Distance(playerPosition, targetPosition) < 0.3f)
         {
             transform.position = targetPosition;
         }
@@ -159,6 +197,7 @@ public class PlayerController : MonoBehaviour
     {
         if (isGameActive)
         {
+            // RotateToMove();
             RelativeMove();
             if (isGrounded)
             {
@@ -176,61 +215,115 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    void OnCollisionEnter(Collision other)
+    private void OnCollisionEnter(Collision other)
     {
-        if (other.gameObject.CompareTag("Ground") && !isGrounded)
-        {
-            isGrounded = true;
-        }
+        if (!other.gameObject.CompareTag("Ground") || isGrounded) return;
+        isGrounded = true;
     }
 
-    void OnCollisionExit(Collision other)
+    private void OnCollisionExit(Collision other)
     {
-        if (other.gameObject.CompareTag("Ground") && isGrounded)
-        {
-            isGrounded = false;
-        }
+        if (!other.gameObject.CompareTag("Ground") || !isGrounded) return;
+        isGrounded = false;
+        audioManager.StopRollingSfx();
     }
 
-    void OnCollisionStay(Collision other)
+    private void OnCollisionStay(Collision other)
     {
-        if (other.gameObject.CompareTag("Ground"))
+        if (!other.gameObject.CompareTag("Ground")) return;
+        isGrounded = true;
+        if (isGrounded && rb.velocity.magnitude > 1.0f)
         {
-            isGrounded = true;
+            audioManager.PlaySfx(audioManager.rolling, true);
+            return;
         }
+        audioManager.StopRollingSfx();
     }
 
-    private void CollectPickUp(Collider pickUp)
+    private void CollectPickUp(Component pickUp)
     {
         pickUp.gameObject.SetActive(false);
         count++;
-        ShowMessage(countText, "Count: " + count.ToString());
+        ShowMessage(countText, count + "/" + countWinCondition);
+		isWinConditionMet = count >= countWinCondition;
+        audioManager.PlaySfx(audioManager.gemCollected);
+        if (!isWinConditionMet) return;
+        audioManager.PlaySfx(audioManager.allGemsCollected);
+        ShowMessage(winConditionText, "You collected all the pick ups!", 4.0f);
     }
 
-    private void EndGame(Collider collider)
+    private void EndGame(Collider other)
     {
         isGameActive = false;
-        endPlatformCollider = collider;
+        endPlatformCollider = other;
         winMenu.SetActive(true);
+        audioManager.PlaySfx(audioManager.finishLevel);
     }
 
-    void OnTriggerEnter(Collider other)
+    private void TutorialMessages(Component other)
+    {
+        if (other.gameObject.CompareTag("MoveTutorial"))
+        {
+            ShowMessage(winConditionText, "Use WASD or Arrow Keys to move!", 4.0f, true);
+        }
+
+        if (other.gameObject.CompareTag("CollectTutorial"))
+        {
+            ShowMessage(winConditionText, "Collect all the pick ups to win!", 4.0f, true);
+        }
+
+        if (other.gameObject.CompareTag("JumpTutorial"))
+        {
+            ShowMessage(winConditionText, "Press Space to jump!", 4.0f, true);
+        }
+
+        if (other.gameObject.CompareTag("TimeTutorial"))
+        {
+            ShowMessage(winConditionText, "You have 30 seconds to complete the level!", 4.0f, true);
+        }
+
+        if (other.gameObject.CompareTag("CameraTutorial"))
+        {
+            ShowMessage(winConditionText, "Move the mouse to look around!", 4.0f, true);
+        }
+        
+        if (other.gameObject.CompareTag("RestartTutorial"))
+        {
+            ShowMessage(winConditionText, "Press T to restart the level!", 4.0f, true);
+        }
+
+        if (other.gameObject.CompareTag("PauseTutorial"))
+        {
+            ShowMessage(winConditionText, "Press Esc to pause the game!", 4.0f, true);
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
     {
         if (other.gameObject.CompareTag("PickUp"))
         {
             CollectPickUp(other);
         }
-
-        if (other.gameObject.CompareTag("EndPlatform"))
+        
+        TutorialMessages(other);
+            
+        if (!other.gameObject.CompareTag("EndPlatform")) return;
+        if (isWinConditionMet)
         {
-            if (count >= countWinCondition)
-            {
-                EndGame(other);
-            }
-            else
-            {
-                ShowMessage(winConditionText, "You need to collect all the pick ups!", 4.0f);
-            }
+            EndGame(other);
+        }
+        else
+        {
+            audioManager.PlaySfx(audioManager.missingGems);
+            ShowMessage(winConditionText, "You need to collect all the pick ups!", 4.0f);
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.gameObject.CompareTag("BoundsTutorial"))
+        {
+            ShowMessage(winConditionText, "Stay within the bounds!", 4.0f, true);
         }
     }
 }

@@ -1,30 +1,31 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class WinMenuSystem : MonoBehaviour
+public class GameOver : MonoBehaviour
 {
+    public GameObject gameOverCanvas;
+    
     private AudioManager audioManager;
     
     private void Awake()
     {
         audioManager = GameObject.FindGameObjectWithTag("Audio").GetComponent<AudioManager>();
     }
-    
-    public void NextLevel()
-    {
-        audioManager.PlaySfx(audioManager.buttonClick);
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);
-    }
 
     public void Retry()
     {
         audioManager.PlaySfx(audioManager.buttonClick);
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
-    
-    public void MainMenu()
+
+    public void Quit()
     {
         audioManager.PlaySfx(audioManager.buttonClick);
         SceneManager.LoadScene(0);
+    }
+
+    private void Start()
+    {
+        gameOverCanvas.SetActive(false);
     }
 }

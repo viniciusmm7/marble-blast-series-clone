@@ -8,6 +8,15 @@ TagManager:
   - Ground
   - Bounds
   - EndPlatform
+  - Audio
+  - MoveTutorial
+  - CollectTutorial
+  - BoundsTutorial
+  - JumpTutorial
+  - TimeTutorial
+  - CameraTutorial
+  - RestartTutorial
+  - PauseTutorial
   layers:
   - Default
   - TransparentFX
